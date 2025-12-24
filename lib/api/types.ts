@@ -89,6 +89,68 @@ export interface UpdateTableRequest {
   current_order_id?: string | null;
 }
 
+// Order types - based on Orders Testing Guide
+export type OrderStatus = "open" | "kot_printed" | "billed" | "paid" | "closed";
+
+export interface OrderItem {
+  item_id: string;
+  name_snapshot: string;
+  price_snapshot: number;
+  qty: number;
+  notes?: string;
+}
+
+export interface OrderTotals {
+  sub_total: number;
+  tax_total: number;
+  discount_total: number;
+  grand_total: number;
+}
+
+export interface OrderKotPrint {
+  printed_at: string;
+  items_snapshot: OrderItem[];
+}
+
+export interface OrderBillPrint {
+  printed_at: string;
+  totals_snapshot: OrderTotals;
+}
+
+export interface OrderPayment {
+  amount: number;
+  method: string;
+  paid_at: string;
+  notes?: string;
+}
+
+export interface Order {
+  id: string;
+  table_id: string;
+  area_id: string;
+  status: OrderStatus;
+  items: OrderItem[];
+  totals: OrderTotals;
+  kot_prints: OrderKotPrint[];
+  bill_prints: OrderBillPrint[];
+  payments: OrderPayment[];
+  created_by: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface CreateOrderItemRequest {
+  item_id: string;
+  qty_delta: number;
+  notes?: string;
+}
+
+export interface CreateOrderPaymentRequest {
+  amount: number;
+  method: string;
+  notes?: string;
+}
+
 // Menu types - Backend: name, sort_order for categories; category_id, name, price, is_active for items
 export interface Category {
   id: string;
