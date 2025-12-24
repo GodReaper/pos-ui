@@ -148,6 +148,9 @@ export function OrderPane({
       setKotLoading(true);
       const updated = await apiClient.post<Order>(`/orders/${order.id}/kot`);
       onOrderChange(updated);
+      if (typeof window !== "undefined") {
+        window.open(`/print/kot/${order.id}`, "_blank", "noopener,noreferrer");
+      }
       onKotSuccess?.(updated);
       setStatusMessage("KOT printed");
       setStatusVariant("success");
@@ -166,6 +169,9 @@ export function OrderPane({
       setBillLoading(true);
       const updated = await apiClient.post<Order>(`/orders/${order.id}/bill`);
       onOrderChange(updated);
+      if (typeof window !== "undefined") {
+        window.open(`/print/bill/${order.id}`, "_blank", "noopener,noreferrer");
+      }
       setStatusMessage("Bill printed");
       setStatusVariant("success");
     } catch (error: any) {

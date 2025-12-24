@@ -179,6 +179,9 @@ export default function BillerPage() {
       setKotLoading(true);
       const updated = await apiClient.post<Order>(`/orders/${currentOrder.id}/kot`);
       setCurrentOrder(updated);
+      if (typeof window !== "undefined") {
+        window.open(`/print/kot/${currentOrder.id}`, "_blank", "noopener,noreferrer");
+      }
       setStatusMessage("KOT printed");
       setStatusVariant("success");
     } catch (error: any) {
@@ -196,6 +199,9 @@ export default function BillerPage() {
       setBillLoading(true);
       const updated = await apiClient.post<Order>(`/orders/${currentOrder.id}/bill`);
       setCurrentOrder(updated);
+      if (typeof window !== "undefined") {
+        window.open(`/print/bill/${currentOrder.id}`, "_blank", "noopener,noreferrer");
+      }
       setStatusMessage("Bill printed");
       setStatusVariant("success");
     } catch (error: any) {
