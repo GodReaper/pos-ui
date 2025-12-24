@@ -6,6 +6,7 @@ import type { Category, MenuItem, Order, OrderItem } from "@/lib/api/types";
 import { MenuCategories } from "@/components/MenuCategories";
 import { MenuItems } from "@/components/MenuItems";
 import { RunningOrder } from "@/components/RunningOrder";
+import { PaymentBar } from "@/components/PaymentBar";
 import { showToast } from "@/lib/toast";
 
 interface SimpleTable {
@@ -37,7 +38,6 @@ export function OrderPane({
   const [itemUpdatingId, setItemUpdatingId] = useState<string | null>(null);
   const [kotLoading, setKotLoading] = useState(false);
   const [billLoading, setBillLoading] = useState(false);
-  const [paymentLoading, setPaymentLoading] = useState(false);
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
   const [statusVariant, setStatusVariant] = useState<"success" | "error" | "muted">(
     "muted"
@@ -177,48 +177,9 @@ export function OrderPane({
     }
   };
 
-  const handlePay = async () => {
-    if (!order || order.totals.grand_total <= 0) return;
-    try {
-      setPaymentLoading(true);
-      const updated = await apiClient.post<Order>(`/orders/${order.id}/payment`, [
-        {
-          amount: order.totals.grand_total,
-          method: "cash",
-          notes: "POS web full payment",
-        },
-      ]);
-      onOrderChange(updated);
-      setStatusMessage("Payment processed");
-      setStatusVariant("success");
-    } catch (error: any) {
-      showToast(error.message || "Failed to process payment", "error");
-      setStatusMessage("Failed to process payment");
-      setStatusVariant("error");
-    } finally {
-      setPaymentLoading(false);
-    }
-  };
-
   return (
-    <div className="flex h-full min-h-[420px] flex-col gap-3 rounded-2xl border border-slate-800 bg-slate-950/80 p-3">
-      <div className="mb-1 flex items-center justify-between gap-2">
-        <div>
-          <div className="text-xs font-semibold text-slate-100">
-            {table ? table.name : "No table selected"}
-          </div>
-          <div className="text-[11px] text-slate-400">
-            {table
-              ? order
-                ? `Order #${order.id.slice(-6)} · ${order.status}`
-                : orderLoading
-                  ? "Loading order…"
-                  : "No active order yet."
-              : "Select a table to start an order."}
-          </div>
-        </div>
-      </div>
-      <div className="grid flex-1 grid-cols-1 gap-3 md:grid-cols-3">
+    <div className="flex h-full min-h-[420px] flex-col gap-4">
+      <div className="grid flex-1 grid-cols-1 gap-4 md:grid-cols-[220px_minmax(0,2fr)_minmax(0,1.8fr)]">
         <MenuCategories
           categories={categories}
           selectedCategoryId={selectedCategoryId}
@@ -239,15 +200,27 @@ export function OrderPane({
           itemUpdatingId={itemUpdatingId}
           kotLoading={kotLoading}
           billLoading={billLoading}
-          paymentLoading={paymentLoading}
+          paymentLoading={false}
           statusMessage={statusMessage}
           statusVariant={statusVariant}
           onChangeQty={handleChangeQty}
           onKot={handleKot}
           onBill={handleBill}
-          onPay={handlePay}
+          onPay={() => {}}
         />
       </div>
+
+      <PaymentBar
+        order={order}
+        onPaid={(updated) => {
+          onOrderChange(updated);
+          onKotSuccess?.(updated);
+        }}
+        onStatus={(message, variant) => {
+          setStatusMessage(message);
+          setStatusVariant(variant);
+        }}
+      />
     </div>
   );
 }

@@ -41,9 +41,13 @@ export default function BillerTableOrderPage() {
         if (!isCancelled) {
           setOrder(current);
         }
-      } catch (error: any) {
+      } catch (error: unknown) {
         if (!isCancelled) {
-          showToast(error.message || "Failed to load order", "error");
+          const message =
+            typeof error === "object" && error && "message" in error
+              ? String((error as { message: string }).message)
+              : "Failed to load order";
+          showToast(message, "error");
         }
       } finally {
         if (!isCancelled) {
@@ -67,24 +71,28 @@ export default function BillerTableOrderPage() {
   }, [tableId]);
 
   return (
-    <div className="flex min-h-[calc(100vh-7rem)] flex-col gap-3 rounded-2xl border border-slate-800 bg-slate-950/70 p-4 lg:p-6">
-      <div className="mb-2 flex items-center justify-between gap-3">
-        <div className="flex items-center gap-2">
+    <div className="flex min-h-[calc(100vh-7rem)] flex-col gap-4 rounded-2xl border border-slate-800 bg-slate-950/80 p-4 lg:p-6">
+      {/* Top bar like native POS header */}
+      <div className="flex items-center justify-between gap-4 border-b border-slate-800 pb-3">
+        <div className="flex items-center gap-3">
           <Button
             size="icon"
             variant="ghost"
-            className="h-8 w-8 rounded-full border border-slate-800 bg-slate-900/80"
+            className="h-9 w-9 rounded-full border border-slate-800 bg-slate-900/80"
             onClick={() => router.push("/biller")}
           >
             <ArrowLeft className="h-4 w-4" />
           </Button>
           <div>
-            <div className="text-xs font-semibold text-slate-100">{tableName}</div>
-            <div className="text-[11px] text-slate-400">Full order view</div>
+            <div className="text-sm font-semibold text-slate-50">{tableName}</div>
+            <div className="text-[11px] text-slate-400">
+              {order?.status ? `Status: ${order.status}` : "Tap items to add to order"}
+            </div>
           </div>
         </div>
       </div>
 
+      {/* Main three-column order pane */}
       <OrderPane
         table={{ id: tableId, name: tableName }}
         order={order}

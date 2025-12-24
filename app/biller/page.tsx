@@ -11,6 +11,7 @@ import { Badge } from "@/components/ui/badge";
 import { showToast } from "@/lib/toast";
 import { cn } from "@/lib/utils";
 import { RunningOrder } from "@/components/RunningOrder";
+import { PaymentBar } from "@/components/PaymentBar";
 
 /**
  * Biller main screen - table canvas
@@ -295,8 +296,8 @@ export default function BillerPage() {
         </div>
       </div>
 
-      {/* Right: Inline running order sidebar */}
-      <div className="hidden w-[380px] flex-col lg:flex">
+      {/* Right: Inline running order sidebar + payment */}
+      <div className="hidden w-[380px] flex-col gap-3 lg:flex">
         <RunningOrder
           tableName={selectedTable?.name ?? null}
           order={currentOrder}
@@ -311,6 +312,19 @@ export default function BillerPage() {
           onKot={handleKot}
           onBill={handleBill}
           onPay={handlePay}
+        />
+
+        <PaymentBar
+          order={currentOrder}
+          onPaid={(updated) => {
+            setCurrentOrder(updated);
+            // Optionally clear selection after payment so table returns to idle
+            setSelectedTable(null);
+          }}
+          onStatus={(message, variant) => {
+            setStatusMessage(message);
+            setStatusVariant(variant);
+          }}
         />
       </div>
     </div>

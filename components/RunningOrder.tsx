@@ -36,10 +36,10 @@ export function RunningOrder({
   onPay,
 }: RunningOrderProps) {
   return (
-    <div className="flex h-full flex-col rounded-2xl border border-slate-800 bg-slate-950/80 p-3">
-      <div className="mb-2 flex items-center justify-between gap-2">
+    <div className="flex h-full flex-col rounded-2xl border border-slate-800 bg-slate-950/90 p-3">
+      <div className="mb-3 flex items-center justify-between gap-2">
         <div>
-          <div className="text-xs font-semibold text-slate-100">
+          <div className="text-sm font-semibold text-slate-100">
             {tableName ?? "No table selected"}
           </div>
           <div className="text-[11px] text-slate-400">
@@ -54,7 +54,7 @@ export function RunningOrder({
         </div>
       </div>
 
-      <div className="flex-1 rounded-xl border border-slate-800 bg-slate-950/70 p-2 text-xs">
+      <div className="flex-1 rounded-xl border border-slate-800 bg-slate-950/80 p-2 text-xs">
         {!tableName ? (
           <div className="flex h-full items-center justify-center text-slate-500">
             Select a table to manage its order.

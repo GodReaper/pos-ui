@@ -18,8 +18,8 @@ export function MenuCategories({
   loading,
 }: MenuCategoriesProps) {
   return (
-    <div className="flex h-full flex-col gap-3 rounded-2xl border border-slate-800 bg-slate-950/70 p-3">
-      <div className="px-1 text-xs font-semibold uppercase tracking-wide text-slate-400">
+    <div className="flex h-full flex-col gap-3 rounded-2xl border border-slate-800 bg-slate-950/90 p-3">
+      <div className="px-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-400">
         Categories
       </div>
       {loading && categories.length === 0 ? (
@@ -34,7 +34,7 @@ export function MenuCategories({
             variant={selectedCategoryId === null ? "default" : "ghost"}
             size="sm"
             className={cn(
-              "mb-1 w-full justify-start rounded-xl px-3 text-xs",
+              "mb-1 w-full justify-start rounded-xl px-3 py-2 text-xs",
               selectedCategoryId === null
                 ? "bg-slate-100 text-slate-900 hover:bg-slate-200"
                 : "text-slate-300 hover:bg-slate-900"
