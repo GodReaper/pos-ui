@@ -73,19 +73,53 @@ export default function BillPrintPage() {
     <div className="print-root">
       <style>{`
         @media print {
-          body {
+          * {
+            margin: 0 !important;
+            padding: 0 !important;
+            box-sizing: border-box;
+          }
+          
+          html, body {
+            width: 100%;
+            height: auto;
+            margin: 0 !important;
+            padding: 0 !important;
+            background: #fff !important;
+            color: #000 !important;
+            font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace !important;
+            overflow: visible !important;
+          }
+          
+          body > *:not(.print-root) {
+            display: none !important;
+          }
+          
+          .print-root {
+            width: 100%;
+            height: auto;
+            margin: 0 !important;
+            padding: 0 !important;
+            background: #fff !important;
+          }
+          
+          @page {
+            size: 58mm auto;
             margin: 0;
-            padding: 0;
           }
         }
-        .print-root {
-          font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
-          background: #fff;
-          color: #000;
-          display: flex;
-          justify-content: center;
-          padding: 12px;
+        
+        @media screen {
+          .print-root {
+            font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+            background: #fff;
+            color: #000;
+            display: flex;
+            justify-content: center;
+            padding: 12px;
+            min-height: 100vh;
+          }
         }
+        
         .ticket {
           width: 58mm;
           max-width: 58mm;
