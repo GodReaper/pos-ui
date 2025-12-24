@@ -90,7 +90,7 @@ export interface UpdateTableRequest {
 }
 
 // Order types - based on Orders Testing Guide
-export type OrderStatus = "open" | "kot_printed" | "billed" | "paid" | "closed";
+export type OrderStatus = "open" | "kot_printed" | "billed" | "paid" | "closed" | "cancelled";
 
 export interface OrderItem {
   item_id: string;
@@ -129,6 +129,7 @@ export interface Order {
   table_id: string;
   area_id: string;
   status: OrderStatus;
+  cancel_reason?: string | null;
   items: OrderItem[];
   totals: OrderTotals;
   kot_prints: OrderKotPrint[];

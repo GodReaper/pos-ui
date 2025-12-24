@@ -9,6 +9,7 @@ import {
   UtensilsCrossed,
   Settings,
   LogOut,
+  Receipt,
 } from "lucide-react";
 import { clearToken } from "@/lib/auth/token";
 import { useRouter } from "next/navigation";
@@ -42,6 +43,9 @@ export function AdminSidebar() {
       <nav className="flex-1 p-4 space-y-1">
         <NavLink href="/admin" icon={LayoutDashboard} active={pathname === "/admin"}>
           Dashboard
+        </NavLink>
+        <NavLink href="/admin/orders" icon={Receipt} active={pathname?.startsWith("/admin/orders")}>
+          Orders
         </NavLink>
         <NavLink href="/admin/users" icon={Users} active={pathname?.startsWith("/admin/users")}>
           Users
