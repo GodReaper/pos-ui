@@ -1,10 +1,9 @@
 import { redirect } from "next/navigation";
 import { getServerUser } from "@/lib/auth/server";
 import { isAdmin } from "@/lib/auth";
+import { AdminSidebar } from "@/components/admin-sidebar";
+import { ToastContainer } from "@/components/toast-container";
 
-/**
- * Admin layout - restricts access to admin role only
- */
 export default async function AdminLayout({
   children,
 }: {
@@ -17,14 +16,12 @@ export default async function AdminLayout({
   }
 
   return (
-    <div className="min-h-screen bg-background">
-      <header className="border-b border-border">
-        <div className="container mx-auto px-4 py-4">
-          <h1 className="text-2xl font-bold">Admin Dashboard</h1>
-        </div>
-      </header>
-      <main className="container mx-auto px-4 py-8">{children}</main>
+    <div className="min-h-screen bg-background flex">
+      <AdminSidebar />
+      <main className="flex-1 overflow-auto">
+        {children}
+      </main>
+      <ToastContainer />
     </div>
   );
 }
-
