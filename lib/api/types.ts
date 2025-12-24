@@ -3,13 +3,16 @@
  */
 
 // User types
-export interface BillerUser {
+export interface User {
   id: string;
   username: string;
-  role: "biller";
+  role: "admin" | "biller";
   is_active: boolean;
   created_at: string;
 }
+
+// For backward compatibility
+export type BillerUser = User;
 
 export interface CreateBillerRequest {
   username: string;
