@@ -173,7 +173,7 @@ export function OrdersList({ isAdmin, billerIdFilter }: OrdersListProps) {
         </div>
         <div className="flex items-center gap-2">
           <Button
-            size="xs"
+            size="sm"
             variant="outline"
             className="h-7 px-3 text-[11px]"
             disabled={page <= 1}
@@ -182,7 +182,7 @@ export function OrdersList({ isAdmin, billerIdFilter }: OrdersListProps) {
             Previous
           </Button>
           <Button
-            size="xs"
+            size="sm"
             variant="outline"
             className="h-7 px-3 text-[11px]"
             disabled={page >= totalPages}

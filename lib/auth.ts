@@ -3,6 +3,8 @@
  * Handles RBAC (Role-Based Access Control) for admin and biller roles
  */
 
+import type { UserRole, User } from "./auth/types";
+
 export type { UserRole, User } from "./auth/types";
 
 /**

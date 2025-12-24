@@ -212,7 +212,7 @@ export function OrderPane({
           onChangeQty={handleChangeQty}
           onKot={handleKot}
           onBill={handleBill}
-          onPay={() => {}}
+          onPay={async () => {}}
         />
       </div>
 

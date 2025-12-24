@@ -140,7 +140,7 @@ export function OrderRow({ order, isExpanded, onToggle, canCancel, onCancel }: O
                 <div className="flex items-center gap-4">
                   <span className="text-slate-300">×{item.qty}</span>
                   <span className="w-16 text-right text-slate-200">
-                    {formatCurrency(item.price_snapshot * item.qty)}
+                    {formatCurrencyINR(item.price_snapshot * item.qty)}
                   </span>
                 </div>
               </div>

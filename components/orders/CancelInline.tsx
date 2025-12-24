@@ -55,7 +55,7 @@ export function CancelInline({ orderId: _orderId, onConfirm, onClose, disabled }
       )}
       <div className="mt-3 flex items-center gap-2">
         <Button
-          size="xs"
+          size="sm"
           variant="destructive"
           onClick={handleSubmit}
           disabled={disabled || submitting}
@@ -64,7 +64,7 @@ export function CancelInline({ orderId: _orderId, onConfirm, onClose, disabled }
           {submitting ? "Cancelling..." : "Confirm Cancel"}
         </Button>
         <Button
-          size="xs"
+          size="sm"
           variant="ghost"
           className="h-7 px-3 text-[11px] text-slate-300 hover:text-slate-50"
           onClick={onClose}
