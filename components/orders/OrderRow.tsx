@@ -6,14 +6,7 @@ import type { OrderListItem } from "@/lib/api/orders";
 import { Badge } from "@/components/ui/badge";
 import { CancelInline } from "./CancelInline";
 import { getOrderStatusColors, getOrderStatusLabel } from "@/lib/pos/orderStatusColors";
-
-function formatCurrency(amount: number): string {
-  return new Intl.NumberFormat("en-IN", {
-    style: "currency",
-    currency: "INR",
-    maximumFractionDigits: 0,
-  }).format(amount);
-}
+import { formatCurrencyINR } from "@/lib/utils";
 
 function formatTime(iso: string): string {
   const date = new Date(iso);
@@ -74,7 +67,9 @@ export function OrderRow({ order, isExpanded, onToggle, canCancel, onCancel }: O
           <div className="flex flex-col min-w-[80px]">
             <span className="text-[11px] text-slate-400">Grand total</span>
             <span className="text-xs font-semibold text-emerald-300">
-              {formatCurrency(order.totals?.grand_total ?? 0)}
+              {formatCurrencyINR(
+                order.totals?.grand_total ?? (order as any).grand_total ?? 0,
+              )}
             </span>
           </div>
 

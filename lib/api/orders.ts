@@ -15,6 +15,8 @@ export interface OrderListItem extends Order {
   area_name?: string;
   biller_username?: string;
   status_label?: string;
+  // Some list endpoints may return a flattened grand_total alongside or instead of totals.grand_total
+  grand_total?: number | null;
 }
 
 export interface ListOrdersResponse {

@@ -5,7 +5,7 @@ import type { Order, OrderPayment } from "@/lib/api/types";
 import { apiClient } from "@/lib/api/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { cn } from "@/lib/utils";
+import { cn, formatCurrencyINR } from "@/lib/utils";
 
 type PaymentMethod = "cash" | "upi" | "card";
 
@@ -94,7 +94,7 @@ export function PaymentBar({ order, onPaid, onStatus }: PaymentBarProps) {
     <div className="mt-3 flex flex-col gap-3 rounded-2xl border border-slate-800 bg-slate-950/90 p-3">
       <div className="flex items-center justify-between text-[11px] text-slate-400">
         <span>
-          Payment · <span className="font-semibold text-slate-100">${grandTotal.toFixed(2)}</span>
+          Payment · <span className="font-semibold text-slate-100">{formatCurrencyINR(grandTotal)}</span>
         </span>
         <div className="flex gap-1 rounded-full bg-slate-900/80 p-0.5 text-[10px]">
           <button
@@ -214,7 +214,7 @@ export function PaymentBar({ order, onPaid, onStatus }: PaymentBarProps) {
             <span className="text-slate-400">
               Total entered:{" "}
               <span className="font-semibold text-slate-100">
-                ${splitSum.toFixed(2)}
+                {formatCurrencyINR(splitSum)}
               </span>
             </span>
             <Button
@@ -228,7 +228,7 @@ export function PaymentBar({ order, onPaid, onStatus }: PaymentBarProps) {
           </div>
           {!splitValid && grandTotal > 0 && (
             <div className="text-[10px] text-amber-400">
-              Split amounts must add up to ${grandTotal.toFixed(2)}.
+            Split amounts must add up to {formatCurrencyINR(grandTotal)}.
             </div>
           )}
         </div>

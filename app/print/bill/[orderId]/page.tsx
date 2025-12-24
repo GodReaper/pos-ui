@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import { apiClient } from "@/lib/api/client";
 import type { Order, Table, Area } from "@/lib/api/types";
+import { formatCurrencyINR } from "@/lib/utils";
 
 export default function BillPrintPage() {
   const params = useParams();
@@ -155,7 +156,7 @@ export default function BillPrintPage() {
                 {item.name_snapshot} x{item.qty}
               </span>
               <span className="amount">
-                ${(item.price_snapshot * item.qty).toFixed(2)}
+                {formatCurrencyINR(item.price_snapshot * item.qty)}
               </span>
             </div>
           ))}
@@ -166,15 +167,15 @@ export default function BillPrintPage() {
           <>
             <div className="row">
               <span>Subtotal</span>
-              <span>${order.totals.sub_total.toFixed(2)}</span>
+              <span>{formatCurrencyINR(order.totals.sub_total)}</span>
             </div>
             <div className="row">
               <span>Tax</span>
-              <span>${order.totals.tax_total.toFixed(2)}</span>
+              <span>{formatCurrencyINR(order.totals.tax_total)}</span>
             </div>
             <div className="row bold">
               <span>Total</span>
-              <span>${order.totals.grand_total.toFixed(2)}</span>
+              <span>{formatCurrencyINR(order.totals.grand_total)}</span>
             </div>
           </>
         )}

@@ -3,6 +3,7 @@
 import type { Order, OrderItem } from "@/lib/api/types";
 import { Button } from "@/components/ui/button";
 import { Minus, Plus } from "lucide-react";
+import { formatCurrencyINR } from "@/lib/utils";
 
 interface RunningOrderProps {
   tableName: string | null;
@@ -100,12 +101,12 @@ export function RunningOrder({
                             {item.name_snapshot}
                           </div>
                           <div className="text-[10px] text-slate-500">
-                            Qty {item.qty} · ${item.price_snapshot.toFixed(2)}
+                            Qty {item.qty} · {formatCurrencyINR(item.price_snapshot)}
                             {item.notes ? ` · ${item.notes}` : ""}
                           </div>
                         </div>
                         <div className="text-[11px] font-semibold text-slate-100 tabular-nums">
-                          ${(item.price_snapshot * item.qty).toFixed(2)}
+                          {formatCurrencyINR(item.price_snapshot * item.qty)}
                         </div>
                       </div>
                       <div className="mt-1 flex items-center justify-end gap-1">
@@ -137,25 +138,25 @@ export function RunningOrder({
                 <div className="flex justify-between">
                   <span>Subtotal</span>
                   <span className="tabular-nums text-slate-100">
-                    ${order.totals.sub_total.toFixed(2)}
+                    {formatCurrencyINR(order.totals.sub_total)}
                   </span>
                 </div>
                 <div className="flex justify-between">
                   <span>Tax</span>
                   <span className="tabular-nums text-slate-100">
-                    ${order.totals.tax_total.toFixed(2)}
+                    {formatCurrencyINR(order.totals.tax_total)}
                   </span>
                 </div>
                 <div className="flex justify-between">
                   <span>Discount</span>
                   <span className="tabular-nums text-slate-100">
-                    ${order.totals.discount_total.toFixed(2)}
+                    {formatCurrencyINR(order.totals.discount_total)}
                   </span>
                 </div>
                 <div className="mt-1 flex justify-between text-[12px] font-semibold text-slate-100">
                   <span>Total</span>
                   <span className="tabular-nums text-sky-300">
-                    ${order.totals.grand_total.toFixed(2)}
+                    {formatCurrencyINR(order.totals.grand_total)}
                   </span>
                 </div>
               </div>

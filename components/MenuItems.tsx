@@ -3,6 +3,7 @@
 import type { MenuItem } from "@/lib/api/types";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { formatCurrencyINR } from "@/lib/utils";
 
 interface MenuItemsProps {
   items: MenuItem[];
@@ -57,7 +58,7 @@ export function MenuItems({
                 </div>
                 <div className="mt-2 flex items-center justify-between gap-2">
                   <span className="text-[11px] font-semibold text-sky-300 tabular-nums">
-                    ${item.price.toFixed(2)}
+                    {formatCurrencyINR(item.price)}
                   </span>
                   <Button
                     size="icon"

@@ -1,6 +1,6 @@
 "use client";
 
-import { cn } from "@/lib/utils";
+import { cn, formatCurrencyINR } from "@/lib/utils";
 import type { Table } from "@/lib/api/types";
 import { getTableStatusColors } from "@/lib/pos/statusColors";
 
@@ -64,7 +64,7 @@ export function TableCard({ table, isSelected, onClick, onDoubleClick }: TableCa
         <div className="flex flex-col">
           <span className="text-[11px] text-slate-400">Running Total</span>
           <span className="text-base font-semibold text-slate-50 tabular-nums">
-            ${total.toFixed(2)}
+            {formatCurrencyINR(total)}
           </span>
         </div>
       </div>
