@@ -16,9 +16,10 @@ interface TableCardProps {
   table: BillerTable;
   isSelected?: boolean;
   onClick?: () => void;
+  onDoubleClick?: () => void;
 }
 
-export function TableCard({ table, isSelected, onClick }: TableCardProps) {
+export function TableCard({ table, isSelected, onClick, onDoubleClick }: TableCardProps) {
   const statusColors = getTableStatusColors(table.status);
   const total = typeof table.running_total === "number" ? table.running_total : 0;
 
@@ -26,6 +27,7 @@ export function TableCard({ table, isSelected, onClick }: TableCardProps) {
     <button
       type="button"
       onClick={onClick}
+      onDoubleClick={onDoubleClick}
       className={cn(
         "group relative flex flex-col items-stretch rounded-xl border px-4 py-3 text-left transition-all",
         "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400",

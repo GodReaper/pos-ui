@@ -7,6 +7,7 @@ interface TableGridProps {
   selectedTableId?: string | null;
   isLoading?: boolean;
   onSelectTable?: (table: BillerTable) => void;
+  onOpenOrder?: (table: BillerTable) => void;
 }
 
 export function TableGrid({
@@ -14,6 +15,7 @@ export function TableGrid({
   selectedTableId,
   isLoading,
   onSelectTable,
+  onOpenOrder,
 }: TableGridProps) {
   if (isLoading && tables.length === 0) {
     return (
@@ -39,6 +41,7 @@ export function TableGrid({
           table={table}
           isSelected={selectedTableId === table.id}
           onClick={() => onSelectTable?.(table)}
+          onDoubleClick={() => onOpenOrder?.(table)}
         />
       ))}
     </div>
