@@ -22,10 +22,15 @@ export default function TablesPage() {
   const [loading, setLoading] = useState(true);
   const [selectedTable, setSelectedTable] = useState<Table | null>(null);
   const [showCreateForm, setShowCreateForm] = useState(false);
-  const [createForm, setCreateForm] = useState({
+  const [createForm, setCreateForm] = useState<{
+    name: string;
+    capacity: number;
+    status: "available" | "occupied" | "reserved" | "out_of_order";
+    position: { x: number; y: number };
+  }>({
     name: "",
     capacity: 4,
-    status: "available" as const,
+    status: "available",
     position: { x: 0, y: 0 },
   });
 
