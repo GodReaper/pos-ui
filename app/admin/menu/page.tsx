@@ -371,10 +371,10 @@ export default function MenuPage() {
                       <Switch
                         id="item-active"
                         checked={createItemForm.is_active}
-                        onChange={(e) =>
+                        onChange={(checked) =>
                           setCreateItemForm({
                             ...createItemForm,
-                            is_active: e.target.checked,
+                            is_active: checked,
                           })
                         }
                       />
@@ -570,8 +570,8 @@ export default function MenuPage() {
               <Label>Active</Label>
               <Switch
                 checked={editingItem.is_active}
-                onChange={(e) =>
-                  setEditingItem({ ...editingItem, is_active: e.target.checked })
+                onChange={(checked) =>
+                  setEditingItem({ ...editingItem, is_active: checked })
                 }
               />
             </div>
