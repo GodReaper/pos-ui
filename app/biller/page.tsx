@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { apiClient } from "@/lib/api/client";
 import type { Area, Table, Order, OrderItem } from "@/lib/api/types";
@@ -31,9 +31,18 @@ export default function BillerPage() {
   const [billLoading, setBillLoading] = useState(false);
   const [paymentLoading, setPaymentLoading] = useState(false);
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
-  const [statusVariant, setStatusVariant] = useState<"success" | "error" | "muted">(
-    "muted"
-  );
+  const [statusVariant, setStatusVariant] = useState<
+    "success" | "error" | "muted"
+  >("muted");
+
+  // refs to help with polling logic
+  const fetchedTotalsRef = useRef<Set<string>>(new Set());
+  const tablesRef = useRef<BillerTable[]>([]);
+
+  // keep ref in sync with state
+  useEffect(() => {
+    tablesRef.current = tables;
+  }, [tables]);
 
   useEffect(() => {
     const loadAreas = async () => {
@@ -56,8 +65,13 @@ export default function BillerPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // Load tables for selected area, poll every 2s (single API),
+  // and fetch running_total once per occupied table.
   useEffect(() => {
     if (!selectedAreaId) return;
+
+    // new area -> reset fetched totals map
+    fetchedTotalsRef.current = new Set();
 
     let isCancelled = false;
     let intervalId: ReturnType<typeof setInterval> | null = null;
@@ -67,12 +81,89 @@ export default function BillerPage() {
         if (withLoading) {
           setTablesLoading(true);
         }
-        const data = await apiClient.get<(Table & { running_total?: number | null })[]>(
-          `/areas/${selectedAreaId}/tables`
+
+        const data = await apiClient.get<
+          (Table & { running_total?: number | null })[]
+        >(`/areas/${selectedAreaId}/tables`);
+
+        if (isCancelled) return;
+
+        const prevTables = tablesRef.current;
+        const prevMap = new Map(prevTables.map((t) => [t.id, t]));
+
+        // merge new data with existing running_total values,
+        // BUT clear running_total if table is available or has no current_order_id
+        let tablesWithTotals: (Table & { running_total?: number | null })[] =
+          data.map((t) => {
+            const prev = prevMap.get(t.id) as BillerTable | undefined;
+
+            // if table is free, no amount should show
+            if (t.status === "available" || !t.current_order_id) {
+              return {
+                ...t,
+                running_total: null,
+              };
+            }
+
+            return {
+              ...t,
+              running_total:
+                (prev as any)?.running_total ??
+                (t as any).running_total ??
+                null,
+            };
+          });
+
+        // Decide which occupied tables still need an initial running_total fetch
+        const toFetch = tablesWithTotals.filter(
+          (t) =>
+            t.status !== "available" &&
+            t.current_order_id &&
+            !fetchedTotalsRef.current.has(t.id) &&
+            (t.running_total === null || t.running_total === undefined)
         );
+
+        if (toFetch.length > 0) {
+          try {
+            const orders = await Promise.all(
+              toFetch.map((t) =>
+                apiClient
+                  .get<Order | null>(`/tables/${t.id}/current`)
+                  .catch(() => null)
+              )
+            );
+
+            const totalsByTableId = new Map<string, number>();
+            orders.forEach((order, idx) => {
+              if (order && order.totals) {
+                totalsByTableId.set(
+                  toFetch[idx].id,
+                  order.totals.grand_total ?? 0
+                );
+              }
+            });
+
+            tablesWithTotals = tablesWithTotals.map((t) => {
+              const total = totalsByTableId.get(t.id);
+              if (typeof total === "number") {
+                fetchedTotalsRef.current.add(t.id);
+                return { ...t, running_total: total };
+              }
+              return t;
+            });
+          } catch {
+            // ignore per-table errors
+          }
+        }
+
         if (!isCancelled) {
-          setTables(data);
-          if (selectedTable && !data.find((t) => t.id === selectedTable.id)) {
+          setTables(tablesWithTotals as BillerTable[]);
+
+          // If selected table disappeared, clear it
+          if (
+            selectedTable &&
+            !tablesWithTotals.find((t) => t.id === selectedTable.id)
+          ) {
             setSelectedTable(null);
           }
         }
@@ -90,6 +181,7 @@ export default function BillerPage() {
     // Initial load with loader
     loadTables(true);
 
+    // Poll table list only every 2s
     intervalId = setInterval(() => {
       loadTables(false);
     }, 2000);
@@ -118,10 +210,14 @@ export default function BillerPage() {
 
         if (withOpen) {
           // Open a new order or get existing open order
-          order = await apiClient.post<Order>(`/tables/${selectedTable.id}/open`);
+          order = await apiClient.post<Order>(
+            `/tables/${selectedTable.id}/open`
+          );
         } else {
           // Refresh current order snapshot
-          order = await apiClient.get<Order | null>(`/tables/${selectedTable.id}/current`);
+          order = await apiClient.get<Order | null>(
+            `/tables/${selectedTable.id}/current`
+          );
         }
 
         if (!isCancelled) {
@@ -144,7 +240,7 @@ export default function BillerPage() {
     // Then poll current order every 2s
     intervalId = setInterval(() => {
       loadCurrentOrder(false);
-    }, 2000);
+    }, 20000);
 
     return () => {
       isCancelled = true;
@@ -152,18 +248,47 @@ export default function BillerPage() {
     };
   }, [selectedTable]);
 
+  // Helper: refresh running total for selected table only
+  const refreshSelectedTableTotal = async () => {
+    if (!selectedTable) return;
+    try {
+      const order = await apiClient.get<Order | null>(
+        `/tables/${selectedTable.id}/current`
+      );
+      if (!order) return;
+
+      setTables((prev) =>
+        prev.map((t) =>
+          t.id === selectedTable.id
+            ? ({
+                ...t,
+                running_total: order.totals.grand_total ?? 0,
+              } as BillerTable)
+            : t
+        )
+      );
+      fetchedTotalsRef.current.add(selectedTable.id);
+    } catch {
+      // ignore, UI will still show last known total
+    }
+  };
+
   const updateOrderItem = async (item: OrderItem, qtyDelta: number) => {
     if (!currentOrder || itemUpdatingId) return;
 
     try {
       setItemUpdatingId(item.item_id);
-      const updated = await apiClient.post<Order>(`/orders/${currentOrder.id}/items`, {
-        item_id: item.item_id,
-        qty_delta: qtyDelta,
-      });
+      const updated = await apiClient.post<Order>(
+        `/orders/${currentOrder.id}/items`,
+        {
+          item_id: item.item_id,
+          qty_delta: qtyDelta,
+        }
+      );
       setCurrentOrder(updated);
       setStatusMessage("Updated item quantity");
       setStatusVariant("success");
+      refreshSelectedTableTotal();
     } catch (error: any) {
       showToast(error.message || "Failed to update item", "error");
       setStatusMessage("Failed to update item");
@@ -177,13 +302,20 @@ export default function BillerPage() {
     if (!currentOrder) return;
     try {
       setKotLoading(true);
-      const updated = await apiClient.post<Order>(`/orders/${currentOrder.id}/kot`);
+      const updated = await apiClient.post<Order>(
+        `/orders/${currentOrder.id}/kot`
+      );
       setCurrentOrder(updated);
       if (typeof window !== "undefined") {
-        window.open(`/print/kot/${currentOrder.id}`, "_blank", "noopener,noreferrer");
+        window.open(
+          `/print/kot/${currentOrder.id}`,
+          "_blank",
+          "noopener,noreferrer"
+        );
       }
       setStatusMessage("KOT printed");
       setStatusVariant("success");
+      refreshSelectedTableTotal();
     } catch (error: any) {
       showToast(error.message || "Failed to print KOT", "error");
       setStatusMessage("Failed to print KOT");
@@ -197,13 +329,20 @@ export default function BillerPage() {
     if (!currentOrder) return;
     try {
       setBillLoading(true);
-      const updated = await apiClient.post<Order>(`/orders/${currentOrder.id}/bill`);
+      const updated = await apiClient.post<Order>(
+        `/orders/${currentOrder.id}/bill`
+      );
       setCurrentOrder(updated);
       if (typeof window !== "undefined") {
-        window.open(`/print/bill/${currentOrder.id}`, "_blank", "noopener,noreferrer");
+        window.open(
+          `/print/bill/${currentOrder.id}`,
+          "_blank",
+          "noopener,noreferrer"
+        );
       }
       setStatusMessage("Bill printed");
       setStatusVariant("success");
+      refreshSelectedTableTotal();
     } catch (error: any) {
       showToast(error.message || "Failed to print bill", "error");
       setStatusMessage("Failed to print bill");
@@ -217,16 +356,34 @@ export default function BillerPage() {
     if (!currentOrder || currentOrder.totals.grand_total <= 0) return;
     try {
       setPaymentLoading(true);
-      const updated = await apiClient.post<Order>(`/orders/${currentOrder.id}/payment`, [
-        {
-          amount: currentOrder.totals.grand_total,
-          method: "cash",
-          notes: "POS web full payment",
-        },
-      ]);
+      const updated = await apiClient.post<Order>(
+        `/orders/${currentOrder.id}/payment`,
+        [
+          {
+            amount: currentOrder.totals.grand_total,
+            method: "cash",
+            notes: "POS web full payment",
+          },
+        ]
+      );
       setCurrentOrder(updated);
       setStatusMessage("Payment processed");
       setStatusVariant("success");
+
+      // immediately clear total for this table in UI (in case backend marks it available)
+      if (selectedTable) {
+        setTables((prev) =>
+          prev.map((t) =>
+            t.id === selectedTable.id
+              ? ({ ...t, running_total: null } as BillerTable)
+              : t
+          )
+        );
+        fetchedTotalsRef.current.delete(selectedTable.id);
+      }
+
+      // still try to sync with backend (if it keeps order with 0 total, etc)
+      refreshSelectedTableTotal();
     } catch (error: any) {
       showToast(error.message || "Failed to process payment", "error");
       setStatusMessage("Failed to process payment");
@@ -237,9 +394,9 @@ export default function BillerPage() {
   };
 
   return (
-    <div className="flex min-h-[calc(100vh-7rem)] gap-4 rounded-2xl border border-slate-800 bg-slate-950/60 p-4 lg:p-6">
+    <div className="flex h-[calc(100vh-7rem)] w-full gap-4 overflow-hidden rounded-2xl border border-slate-800 bg-slate-950/60 p-4 lg:p-6">
       {/* Left: Areas + table grid */}
-      <div className="flex min-w-[320px] max-w-md flex-col gap-4">
+      <div className="flex min-w-[260px] flex-[3_1_0%] flex-col gap-4">
         <div className="flex items-center justify-between gap-3">
           <div>
             <h2 className="text-lg font-semibold tracking-tight text-slate-50">
@@ -251,7 +408,10 @@ export default function BillerPage() {
           </div>
 
           {selectedAreaId && (
-            <Badge variant="outline" className="border-slate-700 bg-slate-900/60 text-[11px]">
+            <Badge
+              variant="outline"
+              className="border-slate-700 bg-slate-900/60 text-[11px]"
+            >
               Updating every 2s
             </Badge>
           )}
@@ -287,7 +447,7 @@ export default function BillerPage() {
         </div>
 
         {/* Table grid */}
-        <div className="flex-1 rounded-2xl border border-slate-800 bg-slate-950/40 p-3 lg:p-4">
+        <div className="flex-1 overflow-auto rounded-2xl border border-slate-800 bg-slate-950/40 p-3 lg:p-4">
           <TableGrid
             tables={tables}
             selectedTableId={selectedTable?.id ?? null}
@@ -295,7 +455,9 @@ export default function BillerPage() {
             onSelectTable={(table) => setSelectedTable(table)}
             onOpenOrder={(table) =>
               router.push(
-                `/biller/tables/${table.id}?name=${encodeURIComponent(table.name)}`
+                `/biller/tables/${table.id}?name=${encodeURIComponent(
+                  table.name
+                )}`
               )
             }
           />
@@ -303,7 +465,7 @@ export default function BillerPage() {
       </div>
 
       {/* Right: Inline running order sidebar + payment */}
-      <div className="hidden w-[380px] flex-col gap-3 lg:flex">
+      <div className="hidden min-w-[260px] flex-[2_1_0%] flex-col gap-3 lg:flex">
         <RunningOrder
           tableName={selectedTable?.name ?? null}
           order={currentOrder}
@@ -324,7 +486,9 @@ export default function BillerPage() {
           order={currentOrder}
           onPaid={(updated) => {
             setCurrentOrder(updated);
-            // Optionally clear selection after payment so table returns to idle
+            // we already clear + refresh inside handlePay when using that,
+            // but if PaymentBar calls onPaid directly, we still want to sync
+            refreshSelectedTableTotal();
             setSelectedTable(null);
           }}
           onStatus={(message, variant) => {
