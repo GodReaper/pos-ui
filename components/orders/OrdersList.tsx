@@ -1,7 +1,12 @@
+// components/orders/OrdersList.tsx
 "use client";
 
 import { useEffect, useState } from "react";
-import type { OrderFilterTab, OrderListItem, OrderScope } from "@/lib/api/orders";
+import type {
+  OrderFilterTab,
+  OrderListItem,
+  OrderScope,
+} from "@/lib/api/orders";
 import { listOrders, cancelOrder } from "@/lib/api/orders";
 import { OrderRow } from "./OrderRow";
 import { Button } from "@/components/ui/button";
@@ -32,6 +37,7 @@ export function OrdersList({ isAdmin, billerIdFilter }: OrdersListProps) {
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [currentUser, setCurrentUser] = useState<User | null>(null);
 
+  // Load current user
   useEffect(() => {
     let cancelled = false;
     async function loadUser() {
@@ -48,12 +54,15 @@ export function OrdersList({ isAdmin, billerIdFilter }: OrdersListProps) {
     };
   }, []);
 
+  // Load orders
   useEffect(() => {
     let isCancelled = false;
+
     async function load() {
       try {
         setLoading(true);
         setError(null);
+
         const queryScope: OrderScope = tab;
         const res = await listOrders({
           scope: queryScope,
@@ -61,17 +70,23 @@ export function OrdersList({ isAdmin, billerIdFilter }: OrdersListProps) {
           pageSize,
           billerId: billerIdFilter,
         });
+
         if (isCancelled) return;
+
         setItems(res.items);
         setTotal(res.total);
       } catch (err) {
         if (isCancelled) return;
-        setError(err instanceof Error ? err.message : "Failed to load orders.");
+        setError(
+          err instanceof Error ? err.message : "Failed to load orders.",
+        );
       } finally {
         if (!isCancelled) setLoading(false);
       }
     }
+
     load();
+
     return () => {
       isCancelled = true;
     };
@@ -88,17 +103,15 @@ export function OrdersList({ isAdmin, billerIdFilter }: OrdersListProps) {
     // Only block when already cancelled; backend allows cancelling any other status
     if (order.status === "cancelled") return false;
     if (isAdmin) return true;
-    {
-      if (!currentUser) return false;
-      return order.created_by === currentUser.id;
-    }
-    return false;
+    if (!currentUser) return false;
+    return order.created_by === currentUser.id;
   };
 
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
 
   return (
     <div className="flex h-full flex-col gap-4">
+      {/* Tabs + summary */}
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div className="inline-flex rounded-full border border-slate-800 bg-slate-900/80 p-1 text-xs">
           {TABS.map((t) => (
@@ -108,6 +121,7 @@ export function OrdersList({ isAdmin, billerIdFilter }: OrdersListProps) {
               onClick={() => {
                 setTab(t.id);
                 setPage(1);
+                setExpandedId(null);
               }}
               className={`rounded-full px-3 py-1.5 transition-colors ${
                 tab === t.id
@@ -125,12 +139,14 @@ export function OrdersList({ isAdmin, billerIdFilter }: OrdersListProps) {
         </div>
       </div>
 
+      {/* Error */}
       {error && (
         <div className="rounded-md border border-rose-600/60 bg-rose-950/60 px-3 py-2 text-xs text-rose-100">
           {error}
         </div>
       )}
 
+      {/* Empty / loading / list */}
       {loading && !items.length ? (
         <div className="flex flex-1 items-center justify-center text-xs text-slate-400">
           Loading orders...
@@ -156,6 +172,7 @@ export function OrdersList({ isAdmin, billerIdFilter }: OrdersListProps) {
         </div>
       )}
 
+      {/* Pagination */}
       <div className="mt-2 flex items-center justify-between border-t border-slate-800 pt-3 text-xs text-slate-300">
         <div>
           Showing{" "}
@@ -166,10 +183,7 @@ export function OrdersList({ isAdmin, billerIdFilter }: OrdersListProps) {
           <span className="font-semibold">
             {(page - 1) * pageSize + items.length}
           </span>{" "}
-          of{" "}
-          <span className="font-semibold">
-            {total}
-          </span>
+          of <span className="font-semibold">{total}</span>
         </div>
         <div className="flex items-center gap-2">
           <Button
@@ -195,6 +209,3 @@ export function OrdersList({ isAdmin, billerIdFilter }: OrdersListProps) {
     </div>
   );
 }
-
-
-

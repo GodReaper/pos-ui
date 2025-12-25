@@ -1,3 +1,4 @@
+// lib/api/orders.ts
 import { apiClient } from "@/lib/api/client";
 import type { Order } from "@/lib/api/types";
 
@@ -17,6 +18,13 @@ export interface OrderListItem extends Order {
   status_label?: string;
   // Some list endpoints may return a flattened grand_total alongside or instead of totals.grand_total
   grand_total?: number | null;
+
+  // 👇 preview items returned by the list endpoint
+  items_preview?: {
+    name: string;
+    qty: number;
+    price: number;
+  }[];
 }
 
 export interface ListOrdersResponse {
@@ -48,11 +56,11 @@ export async function listOrders(params: {
   });
 }
 
-export async function cancelOrder(orderId: string, reason: string): Promise<Order> {
+export async function cancelOrder(
+  orderId: string,
+  reason: string,
+): Promise<Order> {
   return apiClient.post<Order>(`/orders/${orderId}/cancel`, {
     reason,
   });
 }
-
-
-
