@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { apiClient } from "@/lib/api/client";
+import { apiClient, ApiClientError } from "@/lib/api/client";
 import { showToast } from "@/lib/toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -9,8 +9,8 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
-import { Plus, Search, MapPin, Trash2, X } from "lucide-react";
-import type { User, CreateBillerRequest, Area, Assignment, CreateAssignmentRequest } from "@/lib/api/types";
+import { Plus, Search, MapPin, Trash2, X, FileText } from "lucide-react";
+import type { User, CreateBillerRequest, Area, Assignment, CreateAssignmentRequest, UpdateUserRequest } from "@/lib/api/types";
 
 export default function UsersPage() {
   const [users, setUsers] = useState<User[]>([]);
@@ -21,7 +21,9 @@ export default function UsersPage() {
   const [assigningUser, setAssigningUser] = useState<User | null>(null);
   const [selectedAreaIds, setSelectedAreaIds] = useState<string[]>([]);
   const [showCreateForm, setShowCreateForm] = useState(false);
-  const [createForm, setCreateForm] = useState({ username: "", password: "" });
+  const [createForm, setCreateForm] = useState({ username: "", password: "", report_username: "" });
+  const [editingReportUsername, setEditingReportUsername] = useState<User | null>(null);
+  const [reportUsernameValue, setReportUsernameValue] = useState("");
 
   useEffect(() => {
     loadData();
@@ -38,7 +40,7 @@ export default function UsersPage() {
       setUsers(usersData);
       setAreas(areasData);
       setAssignments(assignmentsData || []);
-    } catch (error) {
+    } catch {
       showToast("Failed to load users", "error");
     } finally {
       setLoading(false);
@@ -53,14 +55,16 @@ export default function UsersPage() {
         password: createForm.password,
         role: "biller",
         is_active: true,
+        report_username: createForm.report_username.trim() || null,
       };
       await apiClient.post<User>("/admin/users", data);
       showToast("User created successfully", "success");
       setShowCreateForm(false);
-      setCreateForm({ username: "", password: "" });
+      setCreateForm({ username: "", password: "", report_username: "" });
       loadData();
-    } catch (error: any) {
-      showToast(error.message || "Failed to create user", "error");
+    } catch (error) {
+      const message = error instanceof ApiClientError ? error.message : "Failed to create user";
+      showToast(message, "error");
     }
   };
 
@@ -69,8 +73,9 @@ export default function UsersPage() {
       await apiClient.put(`/admin/users/${user.id}`, { is_active: !user.is_active });
       showToast(`User ${!user.is_active ? "activated" : "deactivated"}`, "success");
       loadData();
-    } catch (error: any) {
-      showToast(error.message || "Failed to update user", "error");
+    } catch (error) {
+      const message = error instanceof ApiClientError ? error.message : "Failed to update user";
+      showToast(message, "error");
     }
   };
 
@@ -79,8 +84,9 @@ export default function UsersPage() {
       await apiClient.delete(`/admin/users/${userId}`);
       showToast("User deleted successfully", "success");
       loadData();
-    } catch (error: any) {
-      showToast(error.message || "Failed to delete user", "error");
+    } catch (error) {
+      const message = error instanceof ApiClientError ? error.message : "Failed to delete user";
+      showToast(message, "error");
     }
   };
 
@@ -97,8 +103,43 @@ export default function UsersPage() {
       setAssigningUser(null);
       setSelectedAreaIds([]);
       loadData();
-    } catch (error: any) {
-      showToast(error.message || "Failed to assign areas", "error");
+    } catch (error) {
+      const message = error instanceof ApiClientError ? error.message : "Failed to assign areas";
+      showToast(message, "error");
+    }
+  };
+
+  const handleUpdateReportUsername = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingReportUsername) return;
+    try {
+      const data: UpdateUserRequest = {
+        report_username: reportUsernameValue.trim() || null,
+      };
+      await apiClient.put(
+        `/admin/users/${editingReportUsername.username}/report-username`,
+        data
+      );
+      showToast("Report username updated successfully", "success");
+      setEditingReportUsername(null);
+      setReportUsernameValue("");
+      loadData();
+    } catch (error) {
+      const message = error instanceof ApiClientError ? error.message : "Failed to update report username";
+      showToast(message, "error");
+    }
+  };
+
+  const handleClearReportUsername = async (username: string) => {
+    try {
+      await apiClient.put(`/admin/users/${username}/report-username`, {
+        report_username: null,
+      });
+      showToast("Report username cleared successfully", "success");
+      loadData();
+    } catch (error) {
+      const message = error instanceof ApiClientError ? error.message : "Failed to clear report username";
+      showToast(message, "error");
     }
   };
 
@@ -111,7 +152,8 @@ export default function UsersPage() {
   const filteredUsers = users.filter(
     (user) =>
       user.username.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      user.id.toLowerCase().includes(searchTerm.toLowerCase())
+      user.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (user.report_username?.toLowerCase().includes(searchTerm.toLowerCase()) ?? false)
   );
 
   // Only show billers for assignment, but display all users
@@ -119,13 +161,13 @@ export default function UsersPage() {
   const admins = filteredUsers.filter((user) => user.role === "admin");
 
   return (
-    <div className="p-8 flex gap-6">
+    <div className="p-4 sm:p-6 lg:p-8 flex flex-col lg:flex-row gap-4 sm:gap-6">
       {/* Main Content */}
-      <div className="flex-1">
+      <div className="flex-1 min-w-0">
         <div className="mb-8 flex items-center justify-between">
           <div>
             <h1 className="text-3xl font-bold tracking-tight">Users</h1>
-            <p className="text-muted-foreground mt-1">Manage users and assign areas to billers</p>
+            <p className="text-muted-foreground mt-1">Manage users, assign areas, and configure report access</p>
           </div>
           <Button onClick={() => setShowCreateForm(!showCreateForm)}>
             <Plus className="h-4 w-4 mr-2" />
@@ -165,6 +207,20 @@ export default function UsersPage() {
                     />
                   </div>
                 </div>
+                <div className="space-y-2">
+                  <Label htmlFor="report_username">
+                    Report Username <span className="text-muted-foreground text-xs">(Optional)</span>
+                  </Label>
+                  <Input
+                    id="report_username"
+                    value={createForm.report_username}
+                    onChange={(e) => setCreateForm({ ...createForm, report_username: e.target.value })}
+                    placeholder="Username this biller can view reports for"
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    If set, this biller can view reports for the specified username. Leave empty to disable report access.
+                  </p>
+                </div>
                 <div className="flex gap-2">
                   <Button type="submit">Create Biller</Button>
                   <Button type="button" variant="outline" onClick={() => setShowCreateForm(false)}>
@@ -180,7 +236,7 @@ export default function UsersPage() {
         <div className="mb-6 relative">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
-            placeholder="Search by name or ID..."
+            placeholder="Search by name, ID, or report username..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             className="pl-10"
@@ -209,6 +265,14 @@ export default function UsersPage() {
                               <div className="flex-1">
                                 <div className="font-semibold">{user.username}</div>
                                 <div className="text-sm text-muted-foreground">ID: {user.id.slice(0, 8)}</div>
+                                {user.report_username && (
+                                  <div className="flex items-center gap-2 mt-1">
+                                    <FileText className="h-3 w-3 text-primary" />
+                                    <Badge variant="outline" className="text-xs bg-primary/10 border-primary/30">
+                                      Reports: {user.report_username}
+                                    </Badge>
+                                  </div>
+                                )}
                                 {assignedAreas.length > 0 && (
                                   <div className="flex items-center gap-2 mt-2">
                                     <MapPin className="h-3 w-3 text-muted-foreground" />
@@ -226,7 +290,7 @@ export default function UsersPage() {
                                 )}
                               </div>
                             </div>
-                            <div className="flex items-center gap-3">
+                            <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
                               <Badge variant={user.is_active ? "default" : "secondary"}>
                                 {user.is_active ? "Active" : "Inactive"}
                               </Badge>
@@ -236,13 +300,27 @@ export default function UsersPage() {
                                 variant="outline"
                                 size="sm"
                                 onClick={() => {
+                                  setEditingReportUsername(user);
+                                  setReportUsernameValue(user.report_username || "");
+                                }}
+                                title="Manage Report Username"
+                                className="text-xs"
+                              >
+                                <FileText className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
+                                <span className="hidden sm:inline">Reports</span>
+                              </Button>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => {
                                   const assignment = assignments.find((a) => a.biller_id === user.id);
                                   setSelectedAreaIds(assignment?.area_ids || []);
                                   setAssigningUser(user);
                                 }}
+                                className="text-xs"
                               >
-                                <MapPin className="h-4 w-4 mr-2" />
-                                Assign Areas
+                                <MapPin className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
+                                <span className="hidden sm:inline">Areas</span>
                               </Button>
                               <Button variant="ghost" size="icon" onClick={() => handleDelete(user.id)}>
                                 <Trash2 className="h-4 w-4" />
@@ -298,7 +376,7 @@ export default function UsersPage() {
 
       {/* Assignment Sidebar */}
       {assigningUser && (
-        <div className="w-80 border-l border-border bg-card p-6">
+        <div className="w-full lg:w-80 lg:border-l border-t lg:border-t-0 border-border bg-card p-4 sm:p-6">
           <div className="mb-6 flex items-center justify-between">
             <div>
               <h2 className="text-xl font-semibold">Assign Areas</h2>
@@ -354,6 +432,74 @@ export default function UsersPage() {
                   setAssigningUser(null);
                   setSelectedAreaIds([]);
                 }}
+              >
+                Cancel
+              </Button>
+            </div>
+          </form>
+        </div>
+      )}
+
+      {/* Report Username Sidebar */}
+      {editingReportUsername && (
+        <div className="w-full lg:w-80 lg:border-l border-t lg:border-t-0 border-border bg-card p-4 sm:p-6">
+          <div className="mb-6 flex items-center justify-between">
+            <div>
+              <h2 className="text-xl font-semibold">Report Username</h2>
+              <p className="text-sm text-muted-foreground">
+                Configure report access for {editingReportUsername.username}
+              </p>
+            </div>
+            <Button variant="ghost" size="icon" onClick={() => setEditingReportUsername(null)}>
+              <X className="h-4 w-4" />
+            </Button>
+          </div>
+
+          <form onSubmit={handleUpdateReportUsername} className="space-y-4">
+            <div className="space-y-3">
+              <Label htmlFor="report_username_input">
+                Report Username <span className="text-muted-foreground text-xs">(Optional)</span>
+              </Label>
+              <Input
+                id="report_username_input"
+                value={reportUsernameValue}
+                onChange={(e) => setReportUsernameValue(e.target.value)}
+                placeholder="Enter username to view reports for"
+              />
+              <p className="text-xs text-muted-foreground">
+                If set, this biller can view reports for the specified username. Leave empty to disable report
+                access.
+              </p>
+              {editingReportUsername.report_username && (
+                <div className="mt-2 p-3 rounded-md bg-muted/50 border border-border">
+                  <div className="text-xs text-muted-foreground mb-1">Current:</div>
+                  <div className="font-medium text-sm">{editingReportUsername.report_username}</div>
+                </div>
+              )}
+            </div>
+
+            <div className="flex flex-col gap-2 pt-4 border-t border-border">
+              <Button type="submit" className="w-full">
+                Save Report Username
+              </Button>
+              {editingReportUsername.report_username && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => handleClearReportUsername(editingReportUsername.username)}
+                  className="w-full"
+                >
+                  Clear Report Username
+                </Button>
+              )}
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => {
+                  setEditingReportUsername(null);
+                  setReportUsernameValue("");
+                }}
+                className="w-full"
               >
                 Cancel
               </Button>

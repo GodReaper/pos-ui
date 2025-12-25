@@ -9,6 +9,7 @@ export interface User {
   role: "admin" | "biller";
   is_active: boolean;
   created_at: string;
+  report_username?: string | null;
 }
 
 // For backward compatibility
@@ -19,6 +20,12 @@ export interface CreateBillerRequest {
   password: string;
   role: "biller";
   is_active?: boolean;
+  report_username?: string | null;
+}
+
+export interface UpdateUserRequest {
+  is_active?: boolean;
+  report_username?: string | null;
 }
 
 export interface Assignment {
@@ -191,4 +198,37 @@ export interface UpdateMenuItemRequest {
   name?: string;
   price?: number;
   is_active?: boolean;
+}
+
+// Reports types - based on Reports API Testing Guide
+export type RunningTableStatus = Extract<OrderStatus, "open" | "kot_printed" | "billed">;
+
+export interface RunningTable {
+  order_id: string;
+  table_id: string;
+  table_name: string;
+  area_id: string;
+  area_name: string;
+  biller_id: string;
+  biller_username: string;
+  current_total: number;
+  status: RunningTableStatus;
+}
+
+export interface BillerPerformance {
+  biller_id: string;
+  biller_username: string;
+  total_sales: number;
+  orders_count: number;
+}
+
+export interface ReportsResponse {
+  username: string;
+  summary: {
+    total_sales: number;
+    running_tables_count: number;
+    payment_mode_breakdown: Record<string, number>;
+  };
+  running_tables: RunningTable[];
+  biller_performance: BillerPerformance[];
 }
