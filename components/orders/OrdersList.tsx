@@ -12,6 +12,7 @@ import { OrderRow } from "./OrderRow";
 import { Button } from "@/components/ui/button";
 import type { User } from "@/lib/api/types";
 import { apiClient } from "@/lib/api/client";
+import { cleanupSettledOrderSnapshots } from "@/components/RunningOrder";
 
 const TABS: { id: OrderFilterTab; label: string }[] = [
   { id: "running", label: "Running" },
@@ -75,6 +76,22 @@ export function OrdersList({ isAdmin, billerIdFilter }: OrdersListProps) {
 
         setItems(res.items);
         setTotal(res.total);
+
+        // Cleanup snapshots for settled orders (paid, closed, cancelled)
+        // Only cleanup if we're viewing closed/cancelled/all tabs
+        if (tab === "closed" || tab === "cancelled" || tab === "all") {
+          const settledOrderIds = res.items
+            .filter((order) => 
+              order.status === "paid" || 
+              order.status === "closed" || 
+              order.status === "cancelled"
+            )
+            .map((order) => order.id);
+          
+          if (settledOrderIds.length > 0) {
+            cleanupSettledOrderSnapshots(settledOrderIds);
+          }
+        }
       } catch (err) {
         if (isCancelled) return;
         setError(

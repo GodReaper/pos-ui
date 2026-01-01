@@ -10,7 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { showToast } from "@/lib/toast";
 import { cn } from "@/lib/utils";
-import { RunningOrder } from "@/components/RunningOrder";
+import { RunningOrder, clearRunningKotSnapshot } from "@/components/RunningOrder";
 import { PaymentBar } from "@/components/PaymentBar";
 
 /**
@@ -306,6 +306,8 @@ export default function BillerPage() {
         `/orders/${currentOrder.id}/kot`
       );
       setCurrentOrder(updated);
+      // Clear running KOT snapshot since regular KOT becomes the new baseline
+      clearRunningKotSnapshot(currentOrder.id);
       if (typeof window !== "undefined") {
         window.open(
           `/print/kot/${currentOrder.id}`,
@@ -323,6 +325,19 @@ export default function BillerPage() {
     } finally {
       setKotLoading(false);
     }
+  };
+
+  const handleRunningKot = () => {
+    if (!currentOrder) return;
+    if (typeof window !== "undefined") {
+      window.open(
+        `/print/kot-running/${currentOrder.id}`,
+        "_blank",
+        "noopener,noreferrer"
+      );
+    }
+    setStatusMessage("Running KOT printed");
+    setStatusVariant("success");
   };
 
   const handleBill = async () => {
@@ -369,6 +384,11 @@ export default function BillerPage() {
       setCurrentOrder(updated);
       setStatusMessage("Payment processed");
       setStatusVariant("success");
+
+      // Clear running KOT snapshot for this settled order
+      if (updated.status === "paid" || updated.status === "closed") {
+        clearRunningKotSnapshot(updated.id);
+      }
 
       // immediately clear total for this table in UI (in case backend marks it available)
       if (selectedTable) {
@@ -478,6 +498,7 @@ export default function BillerPage() {
           statusVariant={statusVariant}
           onChangeQty={updateOrderItem}
           onKot={handleKot}
+          onRunningKot={handleRunningKot}
           onBill={handleBill}
           onPay={handlePay}
         />
@@ -486,6 +507,10 @@ export default function BillerPage() {
           order={currentOrder}
           onPaid={(updated) => {
             setCurrentOrder(updated);
+            // Clear running KOT snapshot if order is settled
+            if (updated.status === "paid" || updated.status === "closed") {
+              clearRunningKotSnapshot(updated.id);
+            }
             // we already clear + refresh inside handlePay when using that,
             // but if PaymentBar calls onPaid directly, we still want to sync
             refreshSelectedTableTotal();

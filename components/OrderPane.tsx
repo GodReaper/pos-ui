@@ -5,7 +5,7 @@ import { apiClient } from "@/lib/api/client";
 import type { Category, MenuItem, Order, OrderItem } from "@/lib/api/types";
 import { MenuCategories } from "@/components/MenuCategories";
 import { MenuItems } from "@/components/MenuItems";
-import { RunningOrder } from "@/components/RunningOrder";
+import { RunningOrder, clearRunningKotSnapshot } from "@/components/RunningOrder";
 import { PaymentBar } from "@/components/PaymentBar";
 import { showToast } from "@/lib/toast";
 
@@ -148,6 +148,8 @@ export function OrderPane({
       setKotLoading(true);
       const updated = await apiClient.post<Order>(`/orders/${order.id}/kot`);
       onOrderChange(updated);
+      // Clear running KOT snapshot since regular KOT becomes the new baseline
+      clearRunningKotSnapshot(order.id);
       if (typeof window !== "undefined") {
         window.open(`/print/kot/${order.id}`, "_blank", "noopener,noreferrer");
       }
@@ -161,6 +163,15 @@ export function OrderPane({
     } finally {
       setKotLoading(false);
     }
+  };
+
+  const handleRunningKot = () => {
+    if (!order) return;
+    if (typeof window !== "undefined") {
+      window.open(`/print/kot-running/${order.id}`, "_blank", "noopener,noreferrer");
+    }
+    setStatusMessage("Running KOT printed");
+    setStatusVariant("success");
   };
 
   const handleBill = async () => {
@@ -211,6 +222,7 @@ export function OrderPane({
           statusVariant={statusVariant}
           onChangeQty={handleChangeQty}
           onKot={handleKot}
+          onRunningKot={handleRunningKot}
           onBill={handleBill}
           onPay={async () => {}}
         />
@@ -220,6 +232,10 @@ export function OrderPane({
         order={order}
         onPaid={(updated) => {
           onOrderChange(updated);
+          // Clear running KOT snapshot if order is settled
+          if (updated.status === "paid" || updated.status === "closed") {
+            clearRunningKotSnapshot(updated.id);
+          }
           onKotSuccess?.(updated);
         }}
         onStatus={(message, variant) => {

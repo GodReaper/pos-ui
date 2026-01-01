@@ -17,8 +17,124 @@ interface RunningOrderProps {
   statusVariant?: "success" | "error" | "muted";
   onChangeQty: (item: OrderItem, delta: number) => void;
   onKot: () => Promise<void>;
+  onRunningKot: () => void;
   onBill: () => Promise<void>;
   onPay: () => Promise<void>;
+}
+
+/**
+ * Storage key for last running KOT snapshot
+ */
+function getRunningKotStorageKey(orderId: string): string {
+  return `running_kot_snapshot_${orderId}`;
+}
+
+/**
+ * Gets the last running KOT snapshot from localStorage
+ */
+function getLastRunningKotSnapshot(orderId: string): OrderItem[] | null {
+  if (typeof window === "undefined") return null;
+  try {
+    const stored = localStorage.getItem(getRunningKotStorageKey(orderId));
+    if (stored) {
+      return JSON.parse(stored) as OrderItem[];
+    }
+  } catch {
+    // Ignore parsing errors
+  }
+  return null;
+}
+
+/**
+ * Clears the saved running KOT snapshot (called when regular KOT is printed)
+ */
+export function clearRunningKotSnapshot(orderId: string): void {
+  if (typeof window === "undefined") return;
+  try {
+    localStorage.removeItem(getRunningKotStorageKey(orderId));
+  } catch {
+    // Ignore storage errors
+  }
+}
+
+/**
+ * Gets all running KOT snapshot keys from localStorage
+ */
+function getAllRunningKotSnapshotKeys(): string[] {
+  if (typeof window === "undefined") return [];
+  const keys: string[] = [];
+  try {
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (key && key.startsWith("running_kot_snapshot_")) {
+        keys.push(key);
+      }
+    }
+  } catch {
+    // Ignore errors
+  }
+  return keys;
+}
+
+/**
+ * Cleans up running KOT snapshots for settled orders (paid, closed, cancelled)
+ * @param settledOrderIds - Array of order IDs that are settled
+ */
+export function cleanupSettledOrderSnapshots(settledOrderIds: string[]): void {
+  if (typeof window === "undefined") return;
+  if (settledOrderIds.length === 0) return;
+  
+  try {
+    const settledSet = new Set(settledOrderIds);
+    const snapshotKeys = getAllRunningKotSnapshotKeys();
+    
+    snapshotKeys.forEach((key) => {
+      // Extract order ID from key (format: "running_kot_snapshot_{orderId}")
+      const orderId = key.replace("running_kot_snapshot_", "");
+      if (settledSet.has(orderId)) {
+        localStorage.removeItem(key);
+      }
+    });
+  } catch {
+    // Ignore storage errors
+  }
+}
+
+/**
+ * Checks if the order has recently added items (items added since last KOT print or running KOT)
+ */
+function hasRecentlyAddedItems(order: Order | null): boolean {
+  if (!order || order.items.length === 0) {
+    return false;
+  }
+
+  // Try to get last running KOT snapshot first
+  const lastRunningKotItems = getLastRunningKotSnapshot(order.id);
+  
+  // If we have a saved running KOT snapshot, use that as baseline
+  let baselineItems: OrderItem[] = [];
+  if (lastRunningKotItems && lastRunningKotItems.length > 0) {
+    baselineItems = lastRunningKotItems;
+  } else if (order.kot_prints && order.kot_prints.length > 0) {
+    // Otherwise, use last regular KOT print snapshot
+    const lastKotPrint = order.kot_prints[order.kot_prints.length - 1];
+    baselineItems = lastKotPrint.items_snapshot || [];
+  } else {
+    // No baseline - all current items are new
+    return order.items.length > 0;
+  }
+
+  // Create a map of item_id -> qty from the baseline
+  const baselineQtyMap = new Map<string, number>();
+  baselineItems.forEach((item) => {
+    baselineQtyMap.set(item.item_id, (baselineQtyMap.get(item.item_id) || 0) + item.qty);
+  });
+
+  // Check if any current item has increased quantity
+  return order.items.some((currentItem) => {
+    const baselineQty = baselineQtyMap.get(currentItem.item_id) || 0;
+    return currentItem.qty > baselineQty;
+  });
 }
 
 export function RunningOrder({
@@ -33,9 +149,11 @@ export function RunningOrder({
   statusVariant = "muted",
   onChangeQty,
   onKot,
+  onRunningKot,
   onBill,
   onPay,
 }: RunningOrderProps) {
+  const hasRecentItems = hasRecentlyAddedItems(order);
   return (
     <div className="flex h-full flex-col rounded-2xl border border-slate-800 bg-slate-950/90 p-3">
       <div className="mb-3 flex items-center justify-between gap-2">
@@ -186,6 +304,14 @@ export function RunningOrder({
             onClick={onKot}
           >
             {kotLoading ? "KOT…" : "KOT"}
+          </Button>
+          <Button
+            size="sm"
+            variant="outline"
+            disabled={!order || !hasRecentItems || order.items.length === 0}
+            onClick={onRunningKot}
+          >
+            Running KOT
           </Button>
           <Button
             size="sm"
